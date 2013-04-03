@@ -33,12 +33,14 @@ class NUM {
 		NUM & operator << (size_t) const;
 
 		bool operator == (long long);
+		bool operator != (long long);
 		bool operator <  (long long);
 		bool operator <= (long long);
 		bool operator >  (long long);
 		bool operator >= (long long);
 
 		bool operator == (const NUM &);
+		bool operator != (const NUM &);
 		bool operator <  (const NUM &);
 		bool operator <= (const NUM &);
 		bool operator >  (const NUM &);
@@ -192,7 +194,8 @@ NUM & NUM::getabs()
 NUM & NUM::sqr ()
 {
 	if (_len == 1) {
-		NUM * ans = new NUM(_figs[0] * _figs[0]);
+		NUM * ans = new NUM(_figs[0]);
+		*ans *= _figs[0];
 		ans->_sign = true;
 		return *ans;
 	}
@@ -208,7 +211,7 @@ NUM & NUM::sqr ()
 
 NUM & NUM::cut (size_t l) const
 {
-	NUM * ans = new NUM(*this);
+	NUM * ans = new NUM(*this);	//плохо
 
 	if (_len > l) {
 		ans -> _figs.resize(l);
@@ -223,9 +226,12 @@ NUM & NUM::operator >> (size_t l) const
 {
 	if (_len <= l) return *(new NUM((long long) 0));
 
-	NUM * ans = new NUM(*this);
+	NUM * ans = new NUM();
+	ans -> _figs.resize(_len - l);
+	ans -> _sign = _sign;
 	for (size_t i = 0; i < _len - l; i++) ans -> _figs[i] = _figs[i + l];
-	ans -> _len -= l;
+	ans -> _len = _len - l;
+
 	return *ans;
 }
 
@@ -261,6 +267,12 @@ bool NUM::operator == (long long t)
 }
 
 
+bool NUM::operator != (long long t)
+{
+	return (! (*this == t));
+}
+
+
 bool NUM::operator < (long long t)
 {
 	unsigned long long abst = abs(t);
@@ -275,6 +287,7 @@ bool NUM::operator < (long long t)
 	if (_sign) return ( (_figs[1] < (abst / _radix)) || ((_figs[1] == (abst / _radix)) && (_figs[0] < (abst % _radix))) );
 	return ( (_figs[1] > (abst / _radix)) || ((_figs[1] == (abst / _radix)) && (_figs[0] > (abst % _radix))) );
 }
+
 
 //следующие три можно написать отдельно для ускорения
 bool NUM::operator <= (long long t)
@@ -306,6 +319,12 @@ bool NUM::operator == (const NUM & t)
 		if (_figs[i] != t._figs[i]) return false;
 
 	return true;
+}
+
+
+bool NUM::operator != (const NUM & t)
+{
+	return (! (*this == t));
 }
 
 
@@ -489,7 +508,8 @@ NUM & NUM::operator * (const NUM & p)
 		return *ans;
 	}
 	if (p._len == 1) {
-		NUM * ans = new NUM(*this * p._figs[0]);
+		NUM * ans = new NUM(*this);
+		*ans *= p._figs[0];
 		ans->_sign = (p._sign == _sign);
 		return *ans;
 	}
@@ -741,9 +761,10 @@ NUM & NUM::big_sub(const NUM & p)
 int main ()
 {
 	NUM a;
-//	NUM b;
-	cin >> a;
-	cout << a << a.sqr() << (a*a);
+	NUM b;
+	cin >> a >> b;
+	cout << a << b;
+	cout << (a*b);
 //	cout << a << a.cut(3) << (a >> 2) << (a << 4);
 //	cout << a << b << (a + b) << (a + t);
 //	cout << (a < b) << endl;
