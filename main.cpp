@@ -18,6 +18,7 @@ class NUM {
 		NUM (const NUM &);
 
 		NUM & operator = (const NUM &);
+		NUM & operator = (long long);
 
 		std::istream & operator >> (std::istream &);
 		std::ostream & operator << (std::ostream &);
@@ -25,8 +26,8 @@ class NUM {
 		void print () const;
 
 		short comp_zero ();
-		size_t getlen ();
-		NUM & getabs ();
+		size_t getlen () const;
+		NUM & getabs () const;
 		NUM & sqr();
 		NUM & cut (size_t) const;
 		NUM & operator >> (size_t) const;
@@ -55,25 +56,25 @@ class NUM {
 		NUM & operator - (long long);
 		NUM & operator * (long long);
 		NUM & operator / (long long);
-//		NUM & operator % (long long);
+		NUM & operator % (long long);
 
 		NUM & operator += (long long);
 		NUM & operator -= (long long);
 		NUM & operator *= (long long);
-//		NUM & operator /= (long long);
-//		NUM & operator %= (long long);
+		NUM & operator /= (long long);
+		NUM & operator %= (long long);
 
 		NUM & operator + (const NUM &);
 		NUM & operator - (const NUM &);
 		NUM & operator * (const NUM &);
-//		NUM & operator / (const NUM &);
-//		NUM & operator % (const NUM &);
+		NUM & operator / (const NUM &);
+		NUM & operator % (const NUM &);
 
 		NUM & operator += (const NUM &);
 		NUM & operator -= (const NUM &);
-//		NUM & operator *= (const NUM &);
-//		NUM & operator /= (const NUM &);
-//		NUM & operator %= (const NUM &);
+		NUM & operator *= (const NUM &);
+		NUM & operator /= (const NUM &);
+		NUM & operator %= (const NUM &);
 
 	private:
 		char * readstr();
@@ -122,11 +123,19 @@ NUM::NUM (const NUM & t)
 }
 
 
-NUM & NUM::operator = (const NUM & t) {
+NUM & NUM::operator = (const NUM & t)
+{
 	_sign = t._sign;
 	_len = t._len;
 	_figs = t._figs;
 	_radix = t._radix;
+	return *this;
+}
+
+
+NUM & NUM::operator = (long long p)
+{
+	*this = NUM(p);
 	return *this;
 }
 
@@ -177,13 +186,13 @@ short NUM::comp_zero()
 }
 
 
-size_t NUM::getlen()
+size_t NUM::getlen() const
 {
 	return _len;
 }
 
 
-NUM & NUM::getabs()
+NUM & NUM::getabs() const
 {
 	NUM * ans = new NUM(*this);
 	ans -> _sign = true;
@@ -337,10 +346,12 @@ bool NUM::operator < (const NUM & t)
 	if (_sign != t._sign) return (_sign < t._sign);
 	if (_len != t._len) return (_len < t._len);
 
-	for (size_t i = 0; i < _len; i++)
-		if (_figs[i] >= t._figs[i]) return false;
+	for (size_t i = _len - 1; i > 0; i--) {			//переделать цикл!
+		if (_figs[i] < t._figs[i]) return true;
+		if (_figs[i] > t._figs[i]) return false;
+	}
 
-	return true;
+	return (_figs[0] < t._figs[0]);
 }
 
 
@@ -423,16 +434,16 @@ NUM & NUM::operator * (long long p)
 
 NUM & NUM::operator / (long long p)
 {
-	NUM * ans = new NUM (*this);
-
-	bool ans_sign = ans -> _sign;
-	ans -> _sign = true;
-	if (*ans < abs(p)) return (*ans *= 0);
-
-	
+	NUM * ans = new NUM(*this);
+	return (*ans /= p);
 }
 
-//		NUM & operator % (long long);
+
+NUM & NUM::operator % (long long p)
+{
+	NUM * ans = new NUM(*this);
+	return (*ans %= p);
+}
 
 
 
@@ -477,8 +488,51 @@ NUM & NUM::operator *= (long long p)
 }
 
 
-//NUM & NUM::operator /= (long long p)
-//NUM & operator %= (long long);
+NUM & NUM::operator /= (long long p)
+{
+	if (abs(p) >= _radix) return (*this /= NUM(p));
+
+	_sign = (_sign == (p > 0));
+	p = abs(p);
+
+	long long next = _figs[_len - 1];
+
+	for (size_t i = _len - 1; i > 0; i--) {
+		_figs[i] = next / p;
+		next = (next % p) * _radix + _figs[i-1];
+	}
+
+	_figs[0] = next / p;
+
+	while ((_len > 1) && (_figs[_len - 1] == 0)) {
+		_figs.pop_back();
+		_len--;
+	}
+
+	return *this;
+}
+
+NUM & NUM::operator %= (long long p)
+{
+	if (abs(p) >= _radix) return (*this %= NUM(p));
+
+	_sign = (_sign == (p > 0));
+	p = abs(p);
+
+	long long next = _figs[_len - 1];
+
+	for (size_t i = _len - 1; i > 0; i--) {
+		_figs[i] = next / p;
+		next = (next % p) * _radix + _figs[i-1];
+	}
+
+	_figs[0] = next % p;
+
+	_figs.resize(1);
+	_len = 1;
+
+	return *this;
+}
 
 
 
@@ -527,8 +581,41 @@ NUM & NUM::operator * (const NUM & p)
 }
 
 
-//		NUM & operator / (const NUM &);
-//		NUM & operator % (const NUM &);
+NUM & NUM::operator / (const NUM & p)
+{
+	if (*this < p) return *(new NUM((long long) 0));
+
+	bool sign = (_sign == p._sign);
+	this -> _sign = true;
+	NUM absp = p.getabs();
+
+	NUM low;						//можно сразу в стеке
+	low._len = (_len - p._len > 0 ? _len - p._len : 1);
+	low._sign = true;
+	for (size_t i = 0; i < low._len - 1; i++) low._figs.push_back(0);
+	low._figs.push_back(1);
+
+	NUM high;
+	high._len = _len - p._len + 1;
+	high._sign = true;
+	for (size_t i = 0; i < high._len; i++) high._figs.push_back(_radix - 1);
+
+	while ((low + 1) < high) { // < or != ???
+		NUM mid = ((low + high) / 2);
+		if (*this < (mid * absp)) high = mid;
+		else low = mid;
+	}
+
+	low._sign = sign;
+	return *(new NUM(low));
+}
+
+
+NUM & NUM::operator % (const NUM & p)
+{
+	NUM * ans = new NUM(*this);
+	return (*ans %= p);
+}
 
 NUM & NUM::operator += (const NUM & p)
 {
@@ -557,9 +644,46 @@ NUM & NUM::operator -= (const NUM & p)
 }
 
 
-//		NUM & operator *= (const NUM &);
-//		NUM & operator /= (const NUM &);
-//		NUM & operator %= (const NUM &);
+NUM & NUM::operator *= (const NUM & p)
+{
+	return (*this = *this * p);
+}
+
+
+NUM & NUM::operator /= (const NUM & p)
+{
+	return (*this = *this / p);
+}
+
+NUM & NUM::operator %= (const NUM & p)
+{
+	if (*this < p) return *this;
+
+	bool sign = (_sign == p._sign);
+	this -> _sign = true;
+	NUM absp = p.getabs();
+
+	NUM low;						//можно сразу в стеке
+	low._len = (_len - p._len > 0 ? _len - p._len : 1);
+	low._sign = true;
+	for (size_t i = 0; i < low._len - 1; i++) low._figs.push_back(0);
+	low._figs.push_back(1);
+
+	NUM high;
+	high._len = _len - p._len + 1;
+	high._sign = true;
+	for (size_t i = 0; i < high._len; i++) high._figs.push_back(_radix - 1);
+
+	while ((low + 1) < high) { // < or != ???
+		NUM mid = ((low + high) / 2);
+		if (*this < (mid * absp)) high = mid;
+		else low = mid;
+	}
+
+	*this -= low * absp;
+	this -> _sign = sign;
+	return *this;
+}
 
 
 
@@ -760,11 +884,14 @@ NUM & NUM::big_sub(const NUM & p)
 
 int main ()
 {
-	NUM a;
-	NUM b;
+	NUM a, b;
 	cin >> a >> b;
+//	NUM c = a;
 	cout << a << b;
-	cout << (a*b);
+	cout << (a / b);
+	a %= b;
+	cout << a;// << c;// << b;
+//	cout << (a*b);
 //	cout << a << a.cut(3) << (a >> 2) << (a << 4);
 //	cout << a << b << (a + b) << (a + t);
 //	cout << (a < b) << endl;
