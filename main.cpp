@@ -168,9 +168,25 @@ void NUM::scan()
 
 void NUM::print() const
 {
+/* natural form
 	if (! _sign) cout << "- ";
 	for (int i = 0; i < _len; i++) cout << _figs[i] << ' ';
 	cout << endl << "len " << _len << endl;
+*/
+
+	NUM temp(*this);
+	if (temp == 0) cout << '0';
+	else {
+		vector<char> ans;
+
+		while (temp != 0) {
+			ans.push_back((temp % 10)._figs[0]);
+			temp /= 10;
+		}
+
+		if (! _sign) cout << '-';
+		for (long long i = ans.size() - 1; i >= 0; i--) cout << ((int) ans[i]);
+	}
 }
 
 
@@ -884,13 +900,10 @@ NUM & NUM::big_sub(const NUM & p)
 
 int main ()
 {
-	NUM a, b;
-	cin >> a >> b;
-//	NUM c = a;
-	cout << a << b;
-	cout << (a / b);
-	a %= b;
-	cout << a;// << c;// << b;
+	NUM a;
+	cin >> a;
+	cout << a;
+//	<< c;// << b;
 //	cout << (a*b);
 //	cout << a << a.cut(3) << (a >> 2) << (a << 4);
 //	cout << a << b << (a + b) << (a + t);
