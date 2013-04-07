@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <vector>
 #include <string.h>
+#include <string>
 
 namespace bignum {
 
@@ -16,6 +17,7 @@ namespace bignum {
 			NUM ();
 			NUM (long long);
 			NUM (const char *);
+			NUM (const string &);
 			NUM (const NUM &);
 
 			NUM & operator = (const NUM &);
@@ -24,12 +26,14 @@ namespace bignum {
 			void scan ();
 			void print () const;
 		//	void scan (std::istream &);			//как организовать и как это влияет??
-		//	void print (std::ostream &) const;
-			std::istream & operator >> (std::istream &);
-			std::ostream & operator << (std::ostream &);
+		//	std::ostream & print (std::ostream &);
+			friend std::istream & operator >> (std::istream &, NUM &);
+			friend std::ostream & operator << (std::ostream &, const NUM &);
 
+			bool sign ();
 			short comp_zero ();
 			size_t getlen () const;
+			static unsigned long long radix ();
 			NUM abs () const;
 			NUM sqr () const;
 			NUM cut (size_t) const;
@@ -119,6 +123,33 @@ namespace bignum {
 	}
 
 
+	NUM::NUM (const string & s)
+	{
+		_radix = (((unsigned long long) 1) << ((unsigned char) sizeof(unsigned int) * 8));
+
+		unsigned long long slen = s.length();
+
+		unsigned char inf;
+		bool sign;
+		if (s[0] == '-') {
+			sign = false;
+			inf = 1;
+		} else {
+			sign = true;
+			inf = 0;
+		}
+
+		_figs.push_back(s[inf] - '0');
+		_len = 1;
+		_sign = true;
+		for (unsigned long long i = inf + 1; i < slen; i++) {
+			*this *= 10;
+			*this += s[i] - '0';
+		}
+		_sign = sign;
+	}
+
+
 	NUM::NUM (const NUM & t)
 	{
 		_sign = t._sign;
@@ -183,20 +214,42 @@ namespace bignum {
 
 	std::istream & operator >> (std::istream & is, NUM & t)
 	{
-		t.scan();
+		char s[101];
+		is >> s;
+		t.constructor(s);
+		t._figs.resize(t._len);
 		return is;
 	}
 
 
 	std::ostream & operator << (std::ostream & os, const NUM & t)
 	{
-		t.print();
+		NUM temp(t);
+		if (temp == 0) os << '0';
+		else {
+			std::vector<char> ans;
+
+			while (temp != 0) {
+				ans.push_back((temp % 10)._figs[0]);
+				temp /= 10;
+			}
+
+			if (! temp._sign) os << '-';
+			for (long long i = ans.size() - 1; i >= 0; i--) os << ((int) ans[i]);
+		}
+
 		return os;
 	}
 
 
 
 //----sign_and_length_work-----------------------------
+
+	bool NUM::sign ()
+	{
+		return _sign;
+	}
+
 
 	short NUM::comp_zero()
 	{
@@ -211,6 +264,10 @@ namespace bignum {
 		return _len;
 	}
 
+	unsigned long long NUM::radix ()
+	{
+		return (((unsigned long long) 1) << ((unsigned char) sizeof(unsigned int) * 8));
+	}
 
 	NUM NUM::abs () const
 	{
@@ -380,11 +437,11 @@ namespace bignum {
 		if (_len != t._len) return (_len < t._len);
 
 		for (size_t i = _len - 1; i > 0; i--) {			//переделать цикл!
-			if (_figs[i] < t._figs[i]) return true;
-			if (_figs[i] > t._figs[i]) return false;
+			if (_figs[i] < t._figs[i]) return _sign;
+			if (_figs[i] > t._figs[i]) return (! _sign);
 		}
 
-		return (_figs[0] < t._figs[0]);
+		return ((_figs[0] < t._figs[0]) == _sign);
 	}
 
 
